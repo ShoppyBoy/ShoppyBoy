@@ -1,8 +1,12 @@
 import logging
 import asyncio
+import time
+import requests
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, CallbackContext, Updater
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
 # Initialize logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -10,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize bot
 application = ApplicationBuilder().token("6953246709:AAEJyKK44ubgZFMaILwDKZROiLaYOT_AroA").build()
-
 
 # Store bot screaming status
 screaming = True
@@ -33,6 +36,9 @@ SECOND_MENU_MARKUP = InlineKeyboardMarkup([
 async def scream(update: Update, context: CallbackContext) -> None:
     global screaming
     screaming = True
+
+async def start(update: Update, context: CallbackContext) -> None:
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome! I am ShoppyBot, your personal shopping assistant. What would you like to buy today?")
 
 async def whisper(update: Update, context: CallbackContext) -> None:
     global screaming
@@ -67,6 +73,18 @@ async def quit(update: Update, context: CallbackContext) -> None:
     await application.updater.stop()
     await application.stop()
     await application.shutdown()
+
+async def read(update: Update, context: CallbackContext) -> None:
+    # Initialize webdriver
+    browser = webdriver.Chrome()
+    browser.get("https://shopee.sg/Anchor-Strong-Beer-Can-24-x-490ml-i.91799978.4714216766?sp_atk=ed568bb5-2935-4f92-8b40-fd15453d5043&xptdk=ed568bb5-2935-4f92-8b40-fd15453d5043")
+    linkbar = browser.find_element_by_id('source')
+    linkbar.send_keys(context.args) 
+    linkbar.send_keys(Keys.ENTER)
+    time.sleep(100)
+    context.bot.send_message(chat_id=update.message.chat_id, text=browser.current_url)
+    
+    
     
 # Main function to run the bot
 async def main() -> None:
@@ -77,6 +95,9 @@ async def main() -> None:
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CallbackQueryHandler(button_tap))
     application.add_handler(MessageHandler(~filters.Command(), echo))
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('quit', quit))
+    application.add_handler(CommandHandler('read', read))
 
     await application.initialize()
     await application.start()
